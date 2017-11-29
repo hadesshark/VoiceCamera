@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- I18N -->
+    <string name="text_Hint">請說話..</string>
+    <string name="text_VoiceInput">語音輸入</string>
+    <string name="text_StartTTS">啟動TTS</string>
+</resources>

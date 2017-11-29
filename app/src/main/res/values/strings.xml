@@ -1,0 +1,11 @@
+<resources>
+    <string name="app_name">VoiceCamera</string>
+
+    <string name="text_LanguageNotSupported">Language not supported</string>
+    <string name="text_TextToSpeechError">TextToSpeech error</string>
+
+    <!-- I18N -->
+    <string name="text_Hint">Please Speak..</string>
+    <string name="text_VoiceInput">Voice input</string>
+    <string name="text_StartTTS">Start TTS</string>
+</resources>
