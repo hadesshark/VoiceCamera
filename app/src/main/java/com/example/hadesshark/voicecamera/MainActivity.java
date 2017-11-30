@@ -75,9 +75,7 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        /**
-         * 取消功能欄
-         */
+        // 取消功能欄
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
                 WindowManager.LayoutParams.FLAG_FULLSCREEN);
 
@@ -91,9 +89,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        /**
-         * 這樣寫就可以不用 implements
-         */
+        // 這樣寫就可以不用 implements
         mTTS = new TextToSpeech(this, mInitListener);
     }
 
@@ -157,6 +153,42 @@ public class MainActivity extends AppCompatActivity {
                 }
             };
 
+    // 設定 camera
+    private void setupCamera() {
+        CameraManager manager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
+        try {
+            for (String cameraId : manager.getCameraIdList()) {
+                CameraCharacteristics characteristics = manager.getCameraCharacteristics(cameraId);
+
+                Integer facing = characteristics.get(CameraCharacteristics.LENS_FACING);
+
+                if (facing != null && facing == CameraCharacteristics.LENS_FACING_FRONT) {
+                    continue;
+                }
+
+                StreamConfigurationMap map = characteristics.get(
+                        CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP
+                );
+                assert map != null;
+
+                mCaptureSize = Collections.max(Arrays.asList(map.getOutputSizes(ImageFormat.JPEG)),
+                        new Comparator<Size>() {
+                            @Override
+                            public int compare(Size lhs, Size rhs) {
+                                return Long.signum((lhs.getWidth() * lhs.getHeight()) -
+                                        (rhs.getWidth() * lhs.getHeight()));
+                            }
+                        });
+                setupImageReader();
+
+                mCameraId = cameraId;
+                break;
+            }
+        } catch (CameraAccessException e) {
+            e.printStackTrace();
+        }
+    }
+
     private void openCamera() {
         CameraManager manager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
         try {
@@ -190,78 +222,44 @@ public class MainActivity extends AppCompatActivity {
         }
     };
 
+    /**
+     * {@link #mStateCallback} 會一起設定 {@link #mTextureView}
+     */
     private void startPreview() {
         SurfaceTexture mSurfaceTexture = mTextureView.getSurfaceTexture();
-        // 再次省略
         Surface previewSurface = new Surface(mSurfaceTexture);
 
         try {
             mCaptureRequestBuilder = mCameraDeice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
             mCaptureRequestBuilder.addTarget(previewSurface);
-            // 拍照？
-            mCameraDeice.createCaptureSession(Arrays.asList(previewSurface, mImageReader.getSurface()),
-                    mCameraStateCallback, mCameraHandler);
+            mCameraDeice.createCaptureSession(Arrays.asList(previewSurface mImageReader.getSurface()),
+                    mCameraStateCallback,
+                    mCameraHandler);
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }
     }
 
-    private CameraCaptureSession.StateCallback mCameraStateCallback = new CameraCaptureSession.StateCallback() {
-        @Override
-        public void onConfigured(@NonNull CameraCaptureSession cameraCaptureSession) {
-            try {
-                mCaptureRequest = mCaptureRequestBuilder.build();
-                mCameraCaptureSession = cameraCaptureSession;
-                mCameraCaptureSession.setRepeatingRequest(mCaptureRequest,
-                        null,
-                        mCameraHandler);
-            } catch (CameraAccessException e) {
-                e.printStackTrace();
-            }
-        }
-
-        @Override
-        public void onConfigureFailed(@NonNull CameraCaptureSession cameraCaptureSession) {
-
-        }
-    };
-
-    // 設定 camera
-    private void setupCamera() {
-        CameraManager manager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
-        try {
-            for (String cameraId : manager.getCameraIdList()) {
-                CameraCharacteristics characteristics = manager.getCameraCharacteristics(cameraId);
-
-                Integer facing = characteristics.get(CameraCharacteristics.LENS_FACING);
-
-                if (facing != null && facing == CameraCharacteristics.LENS_FACING_FRONT) {
-                    continue;
+    private CameraCaptureSession.StateCallback mCameraStateCallback = new
+            CameraCaptureSession.StateCallback() {
+                @Override
+                public void onConfigured(@NonNull CameraCaptureSession cameraCaptureSession) {
+                    try {
+                        mCaptureRequest = mCaptureRequestBuilder.build();
+                        mCameraCaptureSession = cameraCaptureSession;
+                        mCameraCaptureSession.setRepeatingRequest(mCaptureRequest,
+                                null,
+                                mCameraHandler);
+                    } catch (CameraAccessException e) {
+                        e.printStackTrace();
+                    }
                 }
 
-                StreamConfigurationMap map = characteristics.get(
-                        CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP
-                );
-                assert map != null;
-                mCaptureSize = Collections.max(Arrays.asList(map.getOutputSizes(ImageFormat.JPEG)),
-                        new Comparator<Size>() {
-                            @Override
-                            public int compare(Size lhs, Size rhs) {
-                                return Long.signum((lhs.getWidth() * lhs.getHeight()) -
-                                        (rhs.getWidth() * lhs.getHeight()));
-                            }
-                        });
+                @Override
+                public void onConfigureFailed(@NonNull CameraCaptureSession cameraCaptureSession) {
 
-                // 中間省下看情況。 不可以省下
-                setupImageReader();
-
-                mCameraId = cameraId;
-                break;
+                }
             }
-        } catch (CameraAccessException e) {
-            e.printStackTrace();
-        }
-    }
 
     private void setupImageReader() {
         mImageReader = ImageReader.newInstance(mCaptureSize.getWidth(), mCaptureSize.getHeight(),
@@ -292,42 +290,41 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private CameraCaptureSession.CaptureCallback mCaptureCallback = new CameraCaptureSession.CaptureCallback() {
-        @Override
-        public void onCaptureProgressed(CameraCaptureSession session, CaptureRequest request, CaptureResult partialResult) {
-        }
-
-        @Override
-        public void onCaptureCompleted(CameraCaptureSession session, CaptureRequest request, TotalCaptureResult result) {
-//            capture();
-            Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
-            startActivityForResult(intent, REQ_SPEECH_TO_TEXT);
-        }
-    };
-
-    private void capture() {
+    private void unLockFocus() {
         try {
-            final CaptureRequest.Builder mCaptureBuilder = mCameraDeice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
-            mCaptureBuilder.addTarget(mImageReader.getSurface());
-            CameraCaptureSession.CaptureCallback CaptureCallback = new CameraCaptureSession.CaptureCallback() {
-                @Override
-                public void onCaptureCompleted(CameraCaptureSession session, CaptureRequest request, TotalCaptureResult result) {
-//                    Toast.makeText(getApplicationContext(), "Image Saved!", Toast.LENGTH_SHORT).show();
-                    unLockFocus();
-                }
-            };
-            mCameraCaptureSession.stopRepeating();
-            mCameraCaptureSession.capture(mCaptureBuilder.build(), CaptureCallback, null);
+            mCaptureRequestBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER,
+                    CameraMetadata.CONTROL_AF_TRIGGER_CANCEL);
+            mCameraCaptureSession.setRepeatingRequest(mCaptureRequest,
+                    null,
+                    mCameraHandler);
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }
     }
 
-    private void unLockFocus() {
+    private CameraCaptureSession.CaptureCallback mCaptureCallback = new
+            CameraCaptureSession.CaptureCallback() {
+                @Override
+                public void onCaptureCompleted(@NonNull CameraCaptureSession session, @NonNull CaptureRequest request, @NonNull TotalCaptureResult result) {
+                    Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+                    startActivityForResult(intent, REQ_SPEECH_TO_TEXT);
+                }
+            };
+
+    private void capture() {
         try {
-            mCaptureRequestBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AF_TRIGGER_CANCEL);
-            //mCameraCaptureSession.capture(mCaptureRequestBuilder.build(), null, mCameraHandler);
-            mCameraCaptureSession.setRepeatingRequest(mCaptureRequest, null, mCameraHandler);
+            final CaptureRequest.Builder mCaptureBuilder = mCameraDeice.createCaptureRequest(
+                    CameraDevice.TEMPLATE_STILL_CAPTURE
+            );
+            mCaptureBuilder.addTarget(mImageReader.getSurface());
+            CameraCaptureSession.CaptureCallback CaptureCallback = new
+                    CameraCaptureSession.CaptureCallback() {
+                        @Override
+                        public void onCaptureCompleted(@NonNull CameraCaptureSession session, @NonNull CaptureRequest request, @NonNull TotalCaptureResult result) {
+                            Toast.makeText(getApplicationContext(), "Image Saved!", Toast.LENGTH_SHORT).show();
+                            unLockFocus();
+                        }
+                    };
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }
@@ -346,25 +343,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
     //========================= 以下是 tts 的部份 ==================================
-
-//    @Override
-//    public void onInit(int status) {
-//        if (status == TextToSpeech.ERROR) {
-//            showToast(R.string.text_TextToSpeechError);
-//            return;
-//        }
-//
-//        int available = mTTS.isLanguageAvailable(Locale.getDefault());
-//
-//        if (available == TextToSpeech.LANG_NOT_SUPPORTED) {
-//            showToast(R.string.text_LanguageNotSupported);
-//            return;
-//        }
-//
-//        Intent checkIntent = new Intent();
-//        checkIntent.setAction(TextToSpeech.Engine.ACTION_CHECK_TTS_DATA);
-//        startActivityForResult(checkIntent, REQ_TTS_DATA_CHECK);
-//    }
 
     private final TextToSpeech.OnInitListener mInitListener = new
             TextToSpeech.OnInitListener() {
