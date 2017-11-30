@@ -232,34 +232,13 @@ public class MainActivity extends AppCompatActivity {
         try {
             mCaptureRequestBuilder = mCameraDeice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
             mCaptureRequestBuilder.addTarget(previewSurface);
-            mCameraDeice.createCaptureSession(Arrays.asList(previewSurface mImageReader.getSurface()),
+            mCameraDeice.createCaptureSession(Arrays.asList(previewSurface, mImageReader.getSurface()),
                     mCameraStateCallback,
                     mCameraHandler);
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }
     }
-
-    private CameraCaptureSession.StateCallback mCameraStateCallback = new
-            CameraCaptureSession.StateCallback() {
-                @Override
-                public void onConfigured(@NonNull CameraCaptureSession cameraCaptureSession) {
-                    try {
-                        mCaptureRequest = mCaptureRequestBuilder.build();
-                        mCameraCaptureSession = cameraCaptureSession;
-                        mCameraCaptureSession.setRepeatingRequest(mCaptureRequest,
-                                null,
-                                mCameraHandler);
-                    } catch (CameraAccessException e) {
-                        e.printStackTrace();
-                    }
-                }
-
-                @Override
-                public void onConfigureFailed(@NonNull CameraCaptureSession cameraCaptureSession) {
-
-                }
-            }
 
     private void setupImageReader() {
         mImageReader = ImageReader.newInstance(mCaptureSize.getWidth(), mCaptureSize.getHeight(),
@@ -278,6 +257,7 @@ public class MainActivity extends AppCompatActivity {
         mCameraHandler = new Handler(mCameraThread.getLooper());
     }
 
+    // ======================= 拍照時使用 =================================
     private void lockFocus() {
         try {
             mCaptureRequestBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER,
@@ -302,12 +282,34 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    // CameraCaptureSession 相關 Callback
     private CameraCaptureSession.CaptureCallback mCaptureCallback = new
             CameraCaptureSession.CaptureCallback() {
                 @Override
                 public void onCaptureCompleted(@NonNull CameraCaptureSession session, @NonNull CaptureRequest request, @NonNull TotalCaptureResult result) {
                     Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
                     startActivityForResult(intent, REQ_SPEECH_TO_TEXT);
+                }
+            };
+
+    private CameraCaptureSession.StateCallback mCameraStateCallback = new
+            CameraCaptureSession.StateCallback() {
+                @Override
+                public void onConfigured(@NonNull CameraCaptureSession cameraCaptureSession) {
+                    try {
+                        mCaptureRequest = mCaptureRequestBuilder.build();
+                        mCameraCaptureSession = cameraCaptureSession;
+                        mCameraCaptureSession.setRepeatingRequest(mCaptureRequest,
+                                null,
+                                mCameraHandler);
+                    } catch (CameraAccessException e) {
+                        e.printStackTrace();
+                    }
+                }
+
+                @Override
+                public void onConfigureFailed(@NonNull CameraCaptureSession cameraCaptureSession) {
+
                 }
             };
 
@@ -330,11 +332,16 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    // 語音功能類
     private void checkOption() {
         switch (option) {
             case "拍照":
                 Toast.makeText(getApplicationContext(), "Image Saved!", Toast.LENGTH_SHORT).show();
                 capture();
+                break;
+            case "開燈":
+                break;
+            case "關燈":
                 break;
             default:
                 Toast.makeText(this, option, Toast.LENGTH_SHORT).show();
