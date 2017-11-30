@@ -48,7 +48,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
-public class MainActivity extends AppCompatActivity implements TextToSpeech.OnInitListener {
+public class MainActivity extends AppCompatActivity {
 
     public static final int REQ_SPEECH_TO_TEXT = 0;
     public static final int REQ_TTS_DATA_CHECK = 1;
@@ -75,18 +75,26 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        /**
+         * 取消功能欄
+         */
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
                 WindowManager.LayoutParams.FLAG_FULLSCREEN);
 
         mTextureView = this.findViewById(R.id.textureView);
-
         mMicBtn = this.findViewById(R.id.MicButton);
+
         mMicBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 lockFocus();
             }
         });
+
+        /**
+         * 這樣寫就可以不用 implements
+         */
+        mTTS = new TextToSpeech(this, mInitListener);
     }
 
     @Override
@@ -125,28 +133,29 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
         }
     }
 
-    private TextureView.SurfaceTextureListener mTextureListener = new TextureView.SurfaceTextureListener() {
-        @Override
-        public void onSurfaceTextureAvailable(SurfaceTexture surfaceTexture, int width, int height) {
-            setupCamera(width, height);
-            openCamera();
-        }
+    private TextureView.SurfaceTextureListener mTextureListener = new
+            TextureView.SurfaceTextureListener() {
+                @Override
+                public void onSurfaceTextureAvailable(SurfaceTexture surfaceTexture, int i, int i1) {
+                    setupCamera();
+                    openCamera();
+                }
 
-        @Override
-        public void onSurfaceTextureSizeChanged(SurfaceTexture surfaceTexture, int i, int i1) {
+                @Override
+                public void onSurfaceTextureSizeChanged(SurfaceTexture surfaceTexture, int i, int i1) {
 
-        }
+                }
 
-        @Override
-        public boolean onSurfaceTextureDestroyed(SurfaceTexture surfaceTexture) {
-            return false;
-        }
+                @Override
+                public boolean onSurfaceTextureDestroyed(SurfaceTexture surfaceTexture) {
+                    return false;
+                }
 
-        @Override
-        public void onSurfaceTextureUpdated(SurfaceTexture surfaceTexture) {
+                @Override
+                public void onSurfaceTextureUpdated(SurfaceTexture surfaceTexture) {
 
-        }
-    };
+                }
+            };
 
     private void openCamera() {
         CameraManager manager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
@@ -218,7 +227,7 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
     };
 
     // 設定 camera
-    private void setupCamera(int width, int height) {
+    private void setupCamera() {
         CameraManager manager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
         try {
             for (String cameraId : manager.getCameraIdList()) {
@@ -338,24 +347,46 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
 
     //========================= 以下是 tts 的部份 ==================================
 
-    @Override
-    public void onInit(int status) {
-        if (status == TextToSpeech.ERROR) {
-            showToast(R.string.text_TextToSpeechError);
-            return;
-        }
+//    @Override
+//    public void onInit(int status) {
+//        if (status == TextToSpeech.ERROR) {
+//            showToast(R.string.text_TextToSpeechError);
+//            return;
+//        }
+//
+//        int available = mTTS.isLanguageAvailable(Locale.getDefault());
+//
+//        if (available == TextToSpeech.LANG_NOT_SUPPORTED) {
+//            showToast(R.string.text_LanguageNotSupported);
+//            return;
+//        }
+//
+//        Intent checkIntent = new Intent();
+//        checkIntent.setAction(TextToSpeech.Engine.ACTION_CHECK_TTS_DATA);
+//        startActivityForResult(checkIntent, REQ_TTS_DATA_CHECK);
+//    }
 
-        int available = mTTS.isLanguageAvailable(Locale.getDefault());
+    private final TextToSpeech.OnInitListener mInitListener = new
+            TextToSpeech.OnInitListener() {
+                @Override
+                public void onInit(int status) {
+                    if (status == TextToSpeech.ERROR) {
+                        showToast(R.string.text_TextToSpeechError);
+                        return;
+                    }
 
-        if (available == TextToSpeech.LANG_NOT_SUPPORTED) {
-            showToast(R.string.text_LanguageNotSupported);
-            return;
-        }
+                    int available = mTTS.isLanguageAvailable(Locale.getDefault());
 
-        Intent checkIntent = new Intent();
-        checkIntent.setAction(TextToSpeech.Engine.ACTION_CHECK_TTS_DATA);
-        startActivityForResult(checkIntent, REQ_TTS_DATA_CHECK);
-    }
+                    if (available == TextToSpeech.LANG_NOT_SUPPORTED) {
+                        showToast(R.string.text_LanguageNotSupported);
+                        return;
+                    }
+
+                    Intent checkIntent = new Intent();
+                    checkIntent.setAction(TextToSpeech.Engine.ACTION_CHECK_TTS_DATA);
+                    startActivityForResult(checkIntent, REQ_TTS_DATA_CHECK);
+                }
+            };
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
