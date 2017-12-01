@@ -6,6 +6,7 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.ImageFormat;
 import android.graphics.SurfaceTexture;
+import android.hardware.Camera;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCaptureSession;
 import android.hardware.camera2.CameraCharacteristics;
@@ -28,6 +29,7 @@ import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.text.TextUtils;
 import android.util.Size;
 import android.view.Surface;
 import android.view.TextureView;
@@ -59,6 +61,7 @@ public class MainActivity extends AppCompatActivity {
 
     private String option;
 
+    private CameraManager manager;
     private CameraDevice mCameraDeice;
     private String mCameraId;
     private CameraCaptureSession mCameraCaptureSession;
@@ -69,6 +72,9 @@ public class MainActivity extends AppCompatActivity {
     private HandlerThread mCameraThread;
     private ImageReader mImageReader;
     private Size mCaptureSize;
+    private Boolean Flash;
+    private Boolean isOpenFlash = false;
+//    private Camera mCamera = Camera.open();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -137,6 +143,7 @@ public class MainActivity extends AppCompatActivity {
                     openCamera();
                 }
 
+                // 這個可以修改預覽方向改變的問題
                 @Override
                 public void onSurfaceTextureSizeChanged(SurfaceTexture surfaceTexture, int i, int i1) {
 
@@ -155,7 +162,7 @@ public class MainActivity extends AppCompatActivity {
 
     // 設定 camera
     private void setupCamera() {
-        CameraManager manager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
+        manager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
         try {
             for (String cameraId : manager.getCameraIdList()) {
                 CameraCharacteristics characteristics = manager.getCameraCharacteristics(cameraId);
@@ -170,6 +177,9 @@ public class MainActivity extends AppCompatActivity {
                         CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP
                 );
                 assert map != null;
+
+                // 閃光燈判斷
+                Flash = characteristics.get(CameraCharacteristics.FLASH_INFO_AVAILABLE);
 
                 mCaptureSize = Collections.max(Arrays.asList(map.getOutputSizes(ImageFormat.JPEG)),
                         new Comparator<Size>() {
@@ -190,7 +200,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void openCamera() {
-        CameraManager manager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
+        manager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
         try {
             if (ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA) !=
                     PackageManager.PERMISSION_GRANTED) {
@@ -202,6 +212,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    // 攝像頭相關情況
     private CameraDevice.StateCallback mStateCallback = new CameraDevice.StateCallback() {
         @Override
         public void onOpened(@NonNull CameraDevice cameraDevice) {
@@ -240,16 +251,21 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+
+    // 拍照時圖片處理問題
     private void setupImageReader() {
         mImageReader = ImageReader.newInstance(mCaptureSize.getWidth(), mCaptureSize.getHeight(),
                 ImageFormat.JPEG, 2);
-        mImageReader.setOnImageAvailableListener(new ImageReader.OnImageAvailableListener() {
-            @Override
-            public void onImageAvailable(ImageReader imageReader) {
-                mCameraHandler.post(new imageSever(imageReader.acquireNextImage()));
-            }
-        }, mCameraHandler);
+        mImageReader.setOnImageAvailableListener(mImageReaderListener, mCameraHandler);
     }
+
+    private ImageReader.OnImageAvailableListener mImageReaderListener = new
+            ImageReader.OnImageAvailableListener() {
+                @Override
+                public void onImageAvailable(ImageReader imageReader) {
+                    mCameraHandler.post(new imageSever(imageReader.acquireLatestImage()));
+                }
+            };
 
     private void startCameraThread() {
         mCameraThread = new HandlerThread("CameraThread");
@@ -260,8 +276,10 @@ public class MainActivity extends AppCompatActivity {
     // ======================= 拍照時使用 =================================
     private void lockFocus() {
         try {
+            // 對焦
             mCaptureRequestBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER,
                     CameraMetadata.CONTROL_AF_TRIGGER_START);
+            // 拍照！！
             mCameraCaptureSession.capture(mCaptureRequestBuilder.build(),
                     mCaptureCallback,
                     mCameraHandler);
@@ -274,6 +292,7 @@ public class MainActivity extends AppCompatActivity {
         try {
             mCaptureRequestBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER,
                     CameraMetadata.CONTROL_AF_TRIGGER_CANCEL);
+            // 回復預覽狀態
             mCameraCaptureSession.setRepeatingRequest(mCaptureRequest,
                     null,
                     mCameraHandler);
@@ -282,11 +301,15 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    // CameraCaptureSession 相關 Callback
+    // ======================= CameraCaptureSession 相關 Callback ============================
+
+    // 關於拍照的的功能
     private CameraCaptureSession.CaptureCallback mCaptureCallback = new
             CameraCaptureSession.CaptureCallback() {
                 @Override
                 public void onCaptureCompleted(@NonNull CameraCaptureSession session, @NonNull CaptureRequest request, @NonNull TotalCaptureResult result) {
+
+                    // 開啟 tts
                     Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
                     startActivityForResult(intent, REQ_SPEECH_TO_TEXT);
                 }
@@ -318,7 +341,11 @@ public class MainActivity extends AppCompatActivity {
             final CaptureRequest.Builder mCaptureBuilder = mCameraDeice.createCaptureRequest(
                     CameraDevice.TEMPLATE_STILL_CAPTURE
             );
+            /**
+             * 獲得 {@link mImageReader} 的圖像
+             */
             mCaptureBuilder.addTarget(mImageReader.getSurface());
+            // TODO: 這裡有點怪
             CameraCaptureSession.CaptureCallback CaptureCallback = new
                     CameraCaptureSession.CaptureCallback() {
                         @Override
@@ -332,16 +359,52 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    public void turnLightOn(Boolean enable) {
+//        CaptureRequest.Builder builder;
+//        SurfaceTexture mSurfaceTexture = mTextureView.getSurfaceTexture();
+//        Surface previewSurface = new Surface(mSurfaceTexture);
+//        try {
+//            builder = mCameraDeice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
+//            builder.set(CaptureRequest.FLASH_MODE, CameraMetadata.FLASH_MODE_TORCH);
+//            builder.addTarget(previewSurface);
+//            mCameraCaptureSession.capture(builder.build(), null,null);
+//            isOpenFlash = true;
+//        } catch (CameraAccessException e) {
+//            e.printStackTrace();
+//        }
+
+//        manager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
+//        try {
+//            manager.setTorchMode(mCameraId, enable);
+//        } catch (CameraAccessException e) {
+//            e.printStackTrace();
+//        }
+
+        Camera.Parameters parameters = mCamera.getParameters();
+        List<String> flashModes = parameters.getSupportedFlashModes();
+        if (!Camera.Parameters.FLASH_MODE_ON.equals(flashModes)) {
+            if (flashModes.contains(Camera.Parameters.FLASH_MODE_ON)) {
+                parameters.setFlashMode(Camera.Parameters.FLASH_MODE_ON);
+                mCamera.setParameters(parameters);
+            }
+        }
+    }
+
     // 語音功能類
     private void checkOption() {
+
+
         switch (option) {
             case "拍照":
                 Toast.makeText(getApplicationContext(), "Image Saved!", Toast.LENGTH_SHORT).show();
+
                 capture();
                 break;
             case "開燈":
+                turnLightOn(true);
                 break;
             case "關燈":
+                turnLightOn(false);
                 break;
             default:
                 Toast.makeText(this, option, Toast.LENGTH_SHORT).show();
@@ -388,8 +451,8 @@ public class MainActivity extends AppCompatActivity {
                     List<String> list = data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
                     option = list.get(0);
 
+                    // 回到 camera2
                     checkOption();
-//                    capture();
                 }
                 break;
         }
