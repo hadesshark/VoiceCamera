@@ -360,18 +360,18 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void turnLightOn(Boolean enable) {
-//        CaptureRequest.Builder builder;
-//        SurfaceTexture mSurfaceTexture = mTextureView.getSurfaceTexture();
-//        Surface previewSurface = new Surface(mSurfaceTexture);
-//        try {
-//            builder = mCameraDeice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
-//            builder.set(CaptureRequest.FLASH_MODE, CameraMetadata.FLASH_MODE_TORCH);
-//            builder.addTarget(previewSurface);
-//            mCameraCaptureSession.capture(builder.build(), null,null);
-//            isOpenFlash = true;
-//        } catch (CameraAccessException e) {
-//            e.printStackTrace();
-//        }
+        CaptureRequest.Builder builder;
+        SurfaceTexture mSurfaceTexture = mTextureView.getSurfaceTexture();
+        Surface previewSurface = new Surface(mSurfaceTexture);
+        try {
+            builder = mCameraDeice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
+            builder.set(CaptureRequest.FLASH_MODE, CameraMetadata.FLASH_MODE_TORCH);
+            builder.addTarget(previewSurface);
+            mCameraCaptureSession.capture(builder.build(), null,null);
+            isOpenFlash = true;
+        } catch (CameraAccessException e) {
+            e.printStackTrace();
+        }
 
 //        manager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
 //        try {
@@ -379,15 +379,15 @@ public class MainActivity extends AppCompatActivity {
 //        } catch (CameraAccessException e) {
 //            e.printStackTrace();
 //        }
-
-        Camera.Parameters parameters = mCamera.getParameters();
-        List<String> flashModes = parameters.getSupportedFlashModes();
-        if (!Camera.Parameters.FLASH_MODE_ON.equals(flashModes)) {
-            if (flashModes.contains(Camera.Parameters.FLASH_MODE_ON)) {
-                parameters.setFlashMode(Camera.Parameters.FLASH_MODE_ON);
-                mCamera.setParameters(parameters);
-            }
-        }
+        Camera mCamera = Camera.open();
+//        Camera.Parameters parameters = mCamera.getParameters();
+//        List<String> flashModes = parameters.getSupportedFlashModes();
+//        if (!Camera.Parameters.FLASH_MODE_ON.equals(flashModes)) {
+//            if (flashModes.contains(Camera.Parameters.FLASH_MODE_ON)) {
+//                parameters.setFlashMode(Camera.Parameters.FLASH_MODE_ON);
+//                mCamera.setParameters(parameters);
+//            }
+//        }
     }
 
     // 語音功能類
