@@ -138,14 +138,16 @@ public class MainActivity extends AppCompatActivity {
     private TextureView.SurfaceTextureListener mTextureListener = new
             TextureView.SurfaceTextureListener() {
                 @Override
-                public void onSurfaceTextureAvailable(SurfaceTexture surfaceTexture, int i, int i1) {
+                public void onSurfaceTextureAvailable(SurfaceTexture surfaceTexture, int i, int
+                        i1) {
                     setupCamera();
                     openCamera();
                 }
 
                 // 這個可以修改預覽方向改變的問題
                 @Override
-                public void onSurfaceTextureSizeChanged(SurfaceTexture surfaceTexture, int i, int i1) {
+                public void onSurfaceTextureSizeChanged(SurfaceTexture surfaceTexture, int i, int
+                        i1) {
 
                 }
 
@@ -241,9 +243,11 @@ public class MainActivity extends AppCompatActivity {
         Surface previewSurface = new Surface(mSurfaceTexture);
 
         try {
-            mCaptureRequestBuilder = mCameraDeice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
+            mCaptureRequestBuilder = mCameraDeice.createCaptureRequest(CameraDevice
+                    .TEMPLATE_PREVIEW);
             mCaptureRequestBuilder.addTarget(previewSurface);
-            mCameraDeice.createCaptureSession(Arrays.asList(previewSurface, mImageReader.getSurface()),
+            mCameraDeice.createCaptureSession(Arrays.asList(previewSurface, mImageReader
+                            .getSurface()),
                     mCameraStateCallback,
                     mCameraHandler);
         } catch (CameraAccessException e) {
@@ -307,7 +311,8 @@ public class MainActivity extends AppCompatActivity {
     private CameraCaptureSession.CaptureCallback mCaptureCallback = new
             CameraCaptureSession.CaptureCallback() {
                 @Override
-                public void onCaptureCompleted(@NonNull CameraCaptureSession session, @NonNull CaptureRequest request, @NonNull TotalCaptureResult result) {
+                public void onCaptureCompleted(@NonNull CameraCaptureSession session, @NonNull
+                        CaptureRequest request, @NonNull TotalCaptureResult result) {
 
                     // 開啟 tts
                     Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
@@ -349,8 +354,11 @@ public class MainActivity extends AppCompatActivity {
             CameraCaptureSession.CaptureCallback CaptureCallback = new
                     CameraCaptureSession.CaptureCallback() {
                         @Override
-                        public void onCaptureCompleted(@NonNull CameraCaptureSession session, @NonNull CaptureRequest request, @NonNull TotalCaptureResult result) {
-                            Toast.makeText(getApplicationContext(), "Image Saved!", Toast.LENGTH_SHORT).show();
+                        public void onCaptureCompleted(@NonNull CameraCaptureSession session,
+                                                       @NonNull CaptureRequest request, @NonNull
+                                                               TotalCaptureResult result) {
+                            Toast.makeText(getApplicationContext(), "Image Saved!", Toast
+                                    .LENGTH_SHORT).show();
                             unLockFocus();
                         }
                     };
@@ -360,26 +368,27 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void turnLightOn(Boolean enable) {
-        CaptureRequest.Builder builder;
-        SurfaceTexture mSurfaceTexture = mTextureView.getSurfaceTexture();
-        Surface previewSurface = new Surface(mSurfaceTexture);
+//        CaptureRequest.Builder builder;
+//        SurfaceTexture mSurfaceTexture = mTextureView.getSurfaceTexture();
+//        Surface previewSurface = new Surface(mSurfaceTexture);
+//        try {
+//            builder = mCameraDeice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
+//            builder.set(CaptureRequest.FLASH_MODE, CameraMetadata.FLASH_MODE_TORCH);
+//            builder.addTarget(previewSurface);
+//            mCameraCaptureSession.capture(builder.build(), null, null);
+//            isOpenFlash = true;
+//        } catch (CameraAccessException e) {
+//            e.printStackTrace();
+//        }
+
+        manager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
         try {
-            builder = mCameraDeice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
-            builder.set(CaptureRequest.FLASH_MODE, CameraMetadata.FLASH_MODE_TORCH);
-            builder.addTarget(previewSurface);
-            mCameraCaptureSession.capture(builder.build(), null,null);
-            isOpenFlash = true;
+            manager.setTorchMode(mCameraId, enable);
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }
 
-//        manager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
-//        try {
-//            manager.setTorchMode(mCameraId, enable);
-//        } catch (CameraAccessException e) {
-//            e.printStackTrace();
-//        }
-        Camera mCamera = Camera.open();
+//        Camera mCamera = Camera.open();
 //        Camera.Parameters parameters = mCamera.getParameters();
 //        List<String> flashModes = parameters.getSupportedFlashModes();
 //        if (!Camera.Parameters.FLASH_MODE_ON.equals(flashModes)) {
@@ -448,7 +457,8 @@ public class MainActivity extends AppCompatActivity {
                 break;
             case REQ_SPEECH_TO_TEXT:
                 if (resultCode == RESULT_OK) {
-                    List<String> list = data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
+                    List<String> list = data.getStringArrayListExtra(RecognizerIntent
+                            .EXTRA_RESULTS);
                     option = list.get(0);
 
                     // 回到 camera2
